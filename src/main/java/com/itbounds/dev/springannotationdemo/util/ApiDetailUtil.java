@@ -1,10 +1,14 @@
 package com.itbounds.dev.springannotationdemo.util;
 
-import com.itbounds.dev.springannotationdemo.config.ApplicationContextConfig;
+import com.alibaba.excel.ExcelWriter;
+import com.alibaba.excel.metadata.Sheet;
+import com.alibaba.excel.support.ExcelTypeEnum;
 import com.itbounds.dev.springannotationdemo.model.ApiRelationModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -22,37 +28,61 @@ import java.util.Objects;
 
 /**
  * @Description 获取API入参中存在@NotNull或@NotBlank注解标记的参数列表
+ * <p>
+ * 注意：该工具类正常使用 需要引入如下Jar依赖：
+ * - Spring
+ * - Swagger
+ * - lombok
  * @Author blake
  * @Date 2019-07-19 10:45
  * @Version 1.0
  */
-public class ControllerMethodFieldUtil {
+public class ApiDetailUtil {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws FileNotFoundException {
+
+        System.out.println(Runtime.getRuntime().availableProcessors());
 
         // 1 获取数据列表Models
-        List<ApiRelationModel> apiRelationModels = listControllerAndMethodFieldInfo();
+        List<ApiRelationModel> apiRelationModels = listControllerApiInformation();
 
         for (ApiRelationModel apiRelationModel : apiRelationModels) {
             System.out.println(apiRelationModel);
         }
 
-        /**
-         *
-         @Override public void exportHomeVisitDataList(HomeVisitSearchRequest request, HttpServletResponse response)
-         throws IOException {
+        String sheetName = "ApiDocs"; // TODO Excel文件中sheet名称（可自定义）
+        String filePath = "/Users/bw-pc/Desktop/apiDocs.xlsx"; // TODO 修改成想要保存excel文件的路径
 
-         // 满足查询条件的家访数据列表
-         List<ExportHomeVisitModel> homeVisitModels = adminHomeVisitDAO.listHomeVisit(request);
+        // 2 导出Excel文件至指定路径
+        exportExcelToPathAssigned(apiRelationModels, sheetName, filePath);
 
-         // 导出Excel文件
-         String excelName = fileName + YMDHMS_FORMAT.format(new Date());
-         ExcelUtil.writeExcel(response, homeVisitModels, excelName, fileName, new ExportHomeVisitModel());
-         }
-         */
     }
 
-    public static List<ApiRelationModel> listControllerAndMethodFieldInfo() {
+    /**
+     * @return void
+     * @throws
+     * @description 导出Excel文件至指定路径
+     * @params [apiRelationModels, sheetName, filePath]
+     */
+    private static void exportExcelToPathAssigned(List<ApiRelationModel> apiRelationModels, String sheetName,
+                                                  String filePath)
+            throws FileNotFoundException {
+
+        ExcelWriter writer = new ExcelWriter(new FileOutputStream(filePath), ExcelTypeEnum.XLSX);
+        Sheet sheet = new Sheet(1, 0, ApiRelationModel.class);
+        sheet.setSheetName(sheetName);
+        sheet.setAutoWidth(true);
+        writer.write(apiRelationModels, sheet);
+        writer.finish();
+    }
+
+    /**
+     * @return java.util.List<com.itbounds.dev.springannotationdemo.model.ApiRelationModel>
+     * @throws
+     * @description 遍历Controller中APIs的相关信息
+     * @params []
+     */
+    public static List<ApiRelationModel> listControllerApiInformation() {
 
         AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(ApplicationContextConfig.class);
 
@@ -229,5 +259,12 @@ public class ControllerMethodFieldUtil {
 
         return apiRelationModelList;
     }
+
+}
+
+@Configuration
+@ComponentScan("com.itbounds.dev.springannotationdemo.controller")
+class ApplicationContextConfig {
+
 
 }
